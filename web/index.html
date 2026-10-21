@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CroDJ</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Cro<b>DJ</b></div>
+    <button id="btnImport" class="btn">⬇ Import from Spotify</button>
+    <button id="btnAddFiles" class="btn">+ Add files</button>
+    <input id="filePick" type="file" accept="audio/*" multiple hidden>
+    <div class="spacer"></div>
+    <button id="btnAutoDJ" class="btn toggle" title="CroDJ picks the next songs and mixes them for you">AUTO DJ</button>
+    <button id="btnParty" class="btn toggle" title="Full-screen party mode">PARTY</button>
+    <label class="mastervol">MASTER <input type="range" id="masterVol" min="0" max="1.25" step="0.01" value="1"></label>
+    <button id="btnHelp" class="btn icon" title="How to use CroDJ">?</button>
+    <button id="btnSettings" class="btn icon" title="Settings">⚙</button>
+  </header>
+
+  <section class="strip"><canvas id="strip" title="Scroll to zoom"></canvas></section>
+
+  <main class="decks">
+    <div class="deck" id="deck0"></div>
+    <div class="mixer" id="mixer"></div>
+    <div class="deck right" id="deck1"></div>
+    <div id="aiLock" hidden>
+      <button id="aiBadge" title="Click twice to stop the AI and take control"><span class="ai-dot"></span><span id="aiText">AI MIXING</span><small id="aiHint">click twice to take control</small></button>
+    </div>
+  </main>
+
+  <section class="library">
+    <aside class="lib-side">
+      <div class="side-item active" data-view="all">All tracks <span id="cntAll"></span></div>
+      <div class="side-item" data-view="spotify">Spotify imports <span id="cntSpotify"></span></div>
+      <div class="side-item" data-view="suggest">Suggested next</div>
+      <div class="side-item" data-view="queue">Auto DJ queue <span id="cntQueue"></span></div>
+      <div class="side-item" data-view="history">History</div>
+      <div class="side-label">GENRES</div>
+      <div id="genreList"></div>
+      <div class="side-label">FOLDERS</div>
+      <div id="folderList"></div>
+    </aside>
+    <div class="lib-main">
+      <div class="lib-toolbar">
+        <input id="search" type="search" placeholder="Search title, artist, album, genre…">
+        <label>Sort <select id="sortSel">
+          <option value="title">Title</option><option value="artist">Artist</option>
+          <option value="bpm">BPM</option><option value="camelot">Key</option>
+          <option value="duration">Duration</option><option value="energy">Energy</option>
+          <option value="added">Date added</option>
+        </select></label>
+        <button id="sortDir" class="btn small" title="Reverse order">▲</button>
+        <span id="libStatus" class="muted"></span>
+      </div>
+      <div class="lib-table-wrap">
+        <table class="lib-table"><thead id="libHead"></thead><tbody id="libBody"></tbody></table>
+      </div>
+    </div>
+    <aside class="lib-info" id="info"><div class="muted pad">Select a track to see its details.</div></aside>
+  </section>
+
+  <div id="dropOverlay" hidden>
+    <div class="drop-zone" data-drop="0"><b>DECK A</b><span>drop to load</span></div>
+    <div class="drop-zone" data-drop="lib"><b>LIBRARY</b><span>drop to import</span></div>
+    <div class="drop-zone" data-drop="1"><b>DECK B</b><span>drop to load</span></div>
+  </div>
+
+  <div id="importModal" class="modal" hidden>
+    <div class="modal-box">
+      <h2>Import from Spotify</h2>
+      <p class="muted">Paste a Spotify track, album or playlist link. spotDL downloads the songs with their details and cover art. CroDJ then finds the BPM and key, and they show up under <b>Spotify imports</b>.</p>
+      <div class="row">
+        <input id="spotUrl" type="text" placeholder="https://open.spotify.com/track/…" autocomplete="off" spellcheck="false">
+        <button id="spotPaste" class="btn" title="Paste from clipboard">Paste</button>
+        <button id="spotGo" class="btn primary">Import</button>
+      </div>
+      <div id="jobs"></div>
+      <div class="row end"><button class="btn" data-close>Close</button></div>
+    </div>
+  </div>
+
+  <div id="helpModal" class="modal" hidden>
+    <div class="modal-box help">
+      <h2>How to use CroDJ</h2>
+      <h3>Play a song</h3>
+      <p>Each library row has two ▶ buttons: the first plays on deck A, the second on deck B. You can also drag songs from Explorer onto a deck.</p>
+      <h3>SYNC · MATCH · ASSIST</h3>
+      <ul>
+        <li><b>SYNC</b>: makes this deck follow the other deck's tempo <i>and</i> lines up the beats. Use it when both decks are playing and the kicks sound like they're galloping. When the decks are locked, the SYNC button turns white.</li>
+        <li><b>MATCH</b>: changes only the tempo to match the other deck and leaves the beat position alone. Useful before you start a deck. A <b>!</b> on MATCH means the two songs' keys clash.</li>
+        <li><b>ASSIST</b> (on by default): when you press ▶ on a stopped deck while the other is playing, it syncs automatically and waits for the next bar, so the new song starts perfectly on the beat.</li>
+      </ul>
+      <h3>VOCAL · INSTRU · BEAT</h3>
+      <p>Each knob starts in the <b>centre</b>, which is normal. Turn it <b>left</b> to remove that part (for example, VOCAL left removes the singing). Turn it <b>right</b> to isolate it (the other parts fade out). Drag up or right to turn it right, down or left to turn it left. Double-click a knob to reset it.</p>
+      <h3>AI MIX</h3>
+      <p>Load a song on each deck and press <b>AI MIX</b>. CroDJ analyses both songs, waits for the next phrase, lines up the beats and blends them: it swaps the bass, removes the outgoing vocals so two singers never clash, sweeps a filter, then lands the new song's drop. While the AI is working, the decks are locked. <b>Click the AI badge twice</b> to take control back.</p>
+      <h3>Changing the song on a deck that's playing</h3>
+      <p>Just click ▶ on another song. CroDJ fades to the other deck, swaps the song, then fades back.</p>
+      <div class="row end"><button class="btn" data-close>Got it</button></div>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="modal" hidden>
+    <div class="modal-box">
+      <h2>Settings</h2>
+      <h3>Music folders</h3>
+      <div id="folderSettings"></div>
+      <div class="row"><input id="newFolder" type="text" placeholder="Paste a folder path, e.g. C:\Users\you\Music"><button id="addFolderBtn" class="btn">Add</button></div>
+      <p class="muted" id="dlFolder"></p>
+      <h3>Mixing</h3>
+      <div class="row"><label>AI Mix / Auto DJ length</label><select id="mixBeats"><option value="16">16 beats (short)</option><option value="32" selected>32 beats</option><option value="64">64 beats (long)</option></select></div>
+      <div class="row"><label>Tempo slider range</label><select id="pitchRange"><option value="8">±8%</option><option value="16">±16%</option><option value="50">±50%</option></select></div>
+      <h3>Audio outputs</h3>
+      <div class="row"><label>Master</label><select id="masterOut"></select></div>
+      <div class="row"><label>Headphones (cue)</label><select id="cueOut"></select></div>
+      <p class="muted">To preview tracks in your headphones, pick a separate output device for them.</p>
+      <div class="row end"><button class="btn" data-close>Close</button></div>
+    </div>
+  </div>
+
+  <div id="party" hidden>
+    <canvas id="partyViz"></canvas>
+    <div class="party-info">
+      <img id="partyCover" alt="">
+      <div>
+        <div id="partyTitle"></div>
+        <div id="partyArtist"></div>
+        <div id="partyNext"></div>
+      </div>
+    </div>
+    <div id="partyBpm"></div>
+    <button id="partyExit" class="btn">✕ Exit party mode</button>
+  </div>
+
+  <div id="toast"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
